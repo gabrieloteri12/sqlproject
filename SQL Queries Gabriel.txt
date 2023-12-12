@@ -1,0 +1,103 @@
+1. Find the best-performing employee each year.
+
+WITH t1 as (
+  SELECT 
+    E.FirstName || " " || E.LastName as EmployeeName, 
+    strftime("%Y", I.InvoiceDate) as year, 
+    SUM(I.Total) as total_sales 
+  FROM 
+    Employee E 
+    JOIN Customer C ON E.EmployeeId = C.SupportRepId 
+    JOIN Invoice I ON I.CustomerId = C.CustomerId 
+  GROUP BY 
+    1, 
+    2 
+  ORDER BY 
+    3 DESC
+), 
+t2 as (
+  SELECT 
+    *, 
+    RANK() OVER (
+      PARTITION BY year 
+      ORDER BY 
+        total_sales DESC
+    ) as rnk 
+  FROM 
+    t1
+) 
+SELECT 
+  EmployeeName, 
+  year, 
+  total_sales as sales 
+FROM 
+  t2;
+
+2. Which customer spent the most among American customers?
+SELECT 
+  C.FirstName || " " || C.LastName as CustomerName, 
+  SUM(I.Total) as total_sales 
+FROM 
+  Customer C 
+  JOIN Invoice I ON I.CustomerId = C.CustomerId 
+WHERE 
+  C.Country = "USA" 
+GROUP BY 
+  1 
+ORDER BY 
+  2 DESC 
+LIMIT 
+  5;
+
+3. Which Track shows up in the most playlists?
+SELECT 
+  T.Name as TrackName, 
+  COUNT(P.PlaylistId) as TotalPlaylists 
+FROM 
+  Playlist P 
+  JOIN PlaylistTrack PT ON P.PlaylistId = PT.PlaylistId 
+  JOIN Track T ON T.TrackId = PT.TrackId 
+GROUP BY 
+  1 
+ORDER BY 
+  2 DESC 
+LIMIT 
+  5;
+
+4. Find the best-selling album each year.
+WITH t1 as (
+  SELECT 
+    A.Title as AlbumTitle, 
+    strftime("%Y", InvoiceDate) as year, 
+    SUM(IL.UnitPrice * IL.Quantity) as TotalSales 
+  FROM 
+    Album A 
+    JOIN Track T ON A.AlbumId = T.AlbumId 
+    JOIN InvoiceLine IL ON IL.TrackId = T.TrackId 
+    JOIN Invoice I ON I.InvoiceId = IL.InvoiceId 
+  GROUP BY 
+    1, 
+    2 
+  ORDER BY 
+    3 DESC
+), 
+t2 as (
+  SELECT 
+    *, 
+    RANK() OVER (
+      PARTITION BY year 
+      ORDER BY 
+        TotalSales DESC
+    ) as rnk 
+  FROM 
+    t1
+) 
+SELECT 
+  * 
+FROM 
+  t2 
+WHERE 
+  rnk = 1 
+ORDER BY 
+  year, 
+  rnk;
